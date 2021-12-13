@@ -124,11 +124,11 @@ class WindowCapture:
             hdc.SelectObject(hbmp)
             win32gui.DrawIconEx(hdc.GetHandleOutput(), 0, 0, ci[1], bm.bmWidth, bm.bmHeight, 0, None,2)
             bitmapbits = hbmp.GetBitmapBits(True)
-            hbmp.SaveBitmapFile(hdc, 'mouse_icon.bmp')
+            hbmp.SaveBitmapFile(hdc, 'temp/mouse_icon.bmp')
             win32gui.ReleaseDC(0, gdc)
             hdc.DeleteDC()
             win32gui.DeleteObject(hbmp.GetHandle())
-            img = cv.imread('mouse_icon.bmp')
+            img = cv.imread('temp/mouse_icon.bmp')
         except:
             return None
         return img
