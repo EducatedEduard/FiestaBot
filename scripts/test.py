@@ -13,6 +13,7 @@ from math import atan2, cos, sin, sqrt, pi
 import numpy as np
 from controller import Controller
 from detection import Detection
+from cameracontroller import CameraController
 from window_capture import WindowCapture
 from object import Object
 from bot import Bot
@@ -30,11 +31,43 @@ def calc_distance(point1, point2):
     distance = math.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2)
     return distance
 
-TimeInfo.countdown(3)
 # set dir to parent dir of this dir
 os.chdir(Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
 
+
+wincap = WindowCapture('FiestaOnline')
+control =  Controller(0, 0) 
+detector = Detection('ore', wincap, control)
+
+control.mouse_move(960,540)
+control.click()
+
+TimeInfo.countdown(3)
+
 map = 'goldene_hoehle'
+
+# walk, in order to let minimapindicator show in same dir as cam
+control.press_key('w', .05)
+
+# get destination
+destinations = File_Handler.load_path(map, '1')
+destinations = destinations + destinations + destinations + destinations + destinations
+
+# destinations = File_Handler.load_path(map, 'entry')
+# destinations = File_Handler.load_path(map, 'exit')
+
+cc = CameraController(control, detector, destinations)
+
+# control.turn_camera(-1.96, 0, 0, False, 10)
+
+cc.start()
+
+# sleep(15)
+
+# cc.stop()
+sleep(1)
+print('*************************************************************************************************************************')
+sys.exit()
 
 PLAYER_STANDARD_SPEED = 2.55
 player_speed = 1.075
@@ -44,23 +77,10 @@ player_speed_count = 1
 angle_error = -.091
 angle_error_count = 1
 
-wincap = WindowCapture('FiestaOnline')
-control =  Controller(0, 0) 
-detector = Detection('ore', wincap, control)
-
-# walk, in order to let minimapindicator show in same dir as cam
-control.press_key('w', .05)
-
-# get destination
-# destinations = File_Handler.load_path(map, 'entry')
-destinations = File_Handler.load_path(map, 'exit')
-
 # get position
 player = detector.get_player_position()
 
 actual_path = []
-
-start_time = time()
 
 for destination in destinations:
 

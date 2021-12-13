@@ -1,6 +1,6 @@
 import pydirectinput
 import pyautogui
-from time import sleep
+from time import sleep, time
 from threading import Thread, Lock
 import win32api
 import win32con
@@ -17,7 +17,8 @@ class Controller:
     ACTION_PRESS_KEY = 2
     ACTION_WRITE = 3
 
-    DELAY_CLICK = .2
+    # DELAY_CLICK = .05
+    DELAY_CLICK = 0
     DELAY_PRESS = .05
     DELAY = 0
 
@@ -48,9 +49,14 @@ class Controller:
         self.__write(text)
         # self.__queueAction((self.ACTION_WRITE, text))
 
-    def mouse_move(self, x, y):
+    def mouse_move(self, x, y, relative= False):
+
         x,y = self.convert_to_screen(x,y)
-        pyautogui.moveTo(x,y)#
+        if not relative:
+            pyautogui.moveTo(x,y)
+        else:
+            win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, x, y)
+        
 
     def key_down(self, key):
         pydirectinput.keyDown(key)
@@ -58,32 +64,65 @@ class Controller:
     def key_up(self, key):
         pydirectinput.keyUp(key)
 
-    def turn_camera(self, xAngle, yAngle=0, total_steps=50):
-        #move mouse to midscreen
-        x,y = pyautogui.position()
-        self.mouse_move(960, 540)
+    def mouse_up(self, button):
+        win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP,960,740,0,0)
 
-        # dont moe then 1 time and dont turn over 180 degree
+    def mouse_down(self, button):
+        win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN,960,740,0,0)
+
+    def get_mouse_position(self):
+        return win32api.GetCursorPos()
+
+    def turn_camera(self, xAngle, yAngle=0, total_steps=50, button_is_down=False, stepsize = 0):
+
+        # move mouse to midscreen
+        if not button_is_down:
+            mx, my = win32api.GetCursorPos()
+            win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, 940, 740)
+
+        # dont turn more then 1 time and dont turn over 180 degree
         xAngle = xAngle % (2 * math.pi)
 
         if xAngle > math.pi:
             xAngle = xAngle - 2 * math.pi
-
+        if xAngle < -math.pi:
+            xAngle = xAngle + 2 * math.pi
 
         xDistance = self.FULLTURN / (math.pi * 2) * xAngle
         yDistance = self.FULLTURN / (math.pi * 2) * yAngle
 
+        
+        # if given, calculate number of steps by stepsize
+        if stepsize != 0:
+            if abs(xDistance) > abs(yDistance):
+                total_steps =  abs(round(xDistance / stepsize))
+            else:
+                total_steps = abs(round(yDistance / stepsize))
+            if total_steps == 0:
+                total_steps += 1
+
+        # print(str(xDistance))
+        # print(str(total_steps))
+        # print("++++++++++++++++++++++++++")
+
         # get steps
         steps = self.__get_steps(xDistance, yDistance, total_steps)
+        
+        if not button_is_down:
+            self.mouse_down(button='right')
+    
 
-        pyautogui.mouseDown(button='right')
-        sleep(self.DELAY_CLICK)
-        for (x, y) in steps:
-            win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, x, y) 
-            sleep(.01)
-        pyautogui.mouseUp(button='right')
-        sleep(self.DELAY_CLICK)
-        self.mouse_move(x, y)
+        if len(steps) == 1:
+            step = steps[0]
+            self.mouse_move(step[0], step[1], True) 
+        else:
+            for (x, y) in steps:
+                self.mouse_move(x, y,True) 
+                sleep(.01)
+
+        if not button_is_down:
+            self.mouse_up(button='right')
+            self.mouse_move(mx, my)
 
     def activate_mine_script(self):
         File_Handler.run_ahk("mine")

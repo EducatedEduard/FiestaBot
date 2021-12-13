@@ -8,7 +8,6 @@ class MapTypes:
     NORMAL = "normal"
     PATH = "path"
 
-
 class File_Handler:
 
     # TODO: Apply Singleton Pattern - safe all opened images in one file
@@ -16,7 +15,7 @@ class File_Handler:
     # def get_file_loader():
         
 
-    @abstractmethod
+    @staticmethod
     def load_map(map, maptype):
 
         mapdir = 'maps/' + str(map) + '/' + str(maptype) + '.png'
@@ -24,7 +23,7 @@ class File_Handler:
 
         return map
 
-    @abstractmethod
+    @staticmethod
     def load_path(map, pathname):
         path = 'maps/' + map + '/paths/' + pathname + '.txt'
         txt = open(path)
@@ -41,7 +40,7 @@ class File_Handler:
 
         return points
 
-    @abstractmethod
+    @staticmethod
     def load_image(name):
 
         imagedir = 'images/' + name + '.png'
@@ -49,7 +48,7 @@ class File_Handler:
         
         return image
 
-    @abstractmethod
+    @staticmethod
     def load_icon(name):
 
         icondir = 'images/icons/' + name + '.bmp'
@@ -57,7 +56,7 @@ class File_Handler:
         
         return icon
 
-    @abstractmethod
+    @staticmethod
     def load_cascade(name) -> cv.CascadeClassifier:
 
         cascadedir = 'cascade/' + name + '.xml'
@@ -65,13 +64,13 @@ class File_Handler:
         
         return cascade
 
-    @abstractmethod
+    @staticmethod
     def save_image(name, image):
 
         imagedir = 'debug/' + name + '.png'
         image = cv.imwrite(imagedir, image)
 
-    @abstractmethod
+    @staticmethod
     def run_ahk(name):
         filedir = 'ahk/' + name + '.exe'
         subprocess.run([filedir])

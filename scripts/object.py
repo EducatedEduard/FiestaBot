@@ -7,3 +7,6 @@ class Object:
         self.position = position
         self.angle = angle
         self.type = type
+
+    def get_offset(self, x, y):
+        return Object((self.position + (x,y)), self.type, self.angle)
