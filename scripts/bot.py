@@ -5,13 +5,13 @@ from time import time, sleep
 from numpy import mod, true_divide
 import pyautogui
 from threading import Thread, Lock
-import cv2 as cv
 from enum import Enum
 
 from win32con import DIFFERENCE
 from controller import Controller
 from detection import Detection
 from window_capture import WindowCapture
+from filehandler import File_Handler, MapTypes
 from PIL import Image
 import math
 import random
@@ -40,8 +40,8 @@ class Bot:
 
     state = None
     path = []
-    # targets = []
-    # screenshot = None
+    map = ''
+
     timestamp = None
     movement_screenshot = None
     ores_mined = 0
@@ -63,11 +63,10 @@ class Bot:
 
         self.wincap = WindowCapture(window_name)
         self.control = Controller(self.wincap.offset_x, self.wincap.offset_y)
-        self.detector = Detection('cascade/cascade.xml', self.wincap, self.control)
+        self.detector = Detection('ore', self.wincap, self.control)
+        map = 'goldene_hoehle'
 
-        self.path = self.read_path('maps/path.txt')
-
-
+        self.path = File_Handler.load_path(map, MapTypes.PATH)
 
     def start(self):
         # self.wincap.start()
@@ -255,22 +254,6 @@ class Bot:
         # print('calc distance: ' + str(vo1) + ' + ' + str(vo2))
         vo = (vo1 + vo2)/2 
         return vo, av
-    
-    @staticmethod
-    def read_path(path):
-        txt = open(path)
-        points = []
-        line = ""
-        for l in txt:
-            if l != "":
-                line =  l
-
-        cords = line.split()
-        for s in cords:
-            p = s.split(',')
-            points.append((int(p[0]), int(p[1])))
-
-        return points
 
     def get_distance(self, object : Object, destination):
         self.control.press_key('w', .05)

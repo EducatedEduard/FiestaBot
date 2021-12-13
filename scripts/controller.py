@@ -2,10 +2,11 @@ import pydirectinput
 import pyautogui
 from time import sleep
 from threading import Thread, Lock
-import subprocess
 import win32api
 import win32con
 import math
+
+from filehandler import File_Handler
 
 class Controller:
 
@@ -85,7 +86,7 @@ class Controller:
         self.mouse_move(x, y)
 
     def activate_mine_script(self):
-        subprocess.run(["mine.exe"])
+        File_Handler.run_ahk("mine")
     
     def __click(self, x, y):
         if x != None:

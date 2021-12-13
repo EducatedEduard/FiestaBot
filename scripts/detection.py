@@ -6,6 +6,7 @@ import numpy as np
 import math
 
 from numpy import array
+from filehandler import File_Handler, MapTypes
 from window_capture import WindowCapture
 from controller import Controller
 from object import Object
@@ -23,6 +24,9 @@ class Detection:
     img_pickaxe = None
     img_ore_clicked = None
     img_mining = None
+    img_minimap_symbol = None
+    img_map_symbol = None
+    img_map_clean = None
 
     minimap_x = 0
     minimap_y = 0
@@ -35,23 +39,26 @@ class Detection:
 
     last_position = (0,0)
 
-    map = None
+    map = 'goldene_hoehle'
 
     cascade : cv.CascadeClassifier
 
     wincap: WindowCapture
     controller : Controller
 
-    def __init__(self, model_file_path, wincap, controller) -> None:
+    def __init__(self, cascade_model, wincap, controller) -> None:
         self.lock = Lock()
-        self.cascade = cv.CascadeClassifier(model_file_path)
+        self.cascade = File_Handler.load_cascade(cascade_model)
 
         self.wincap = wincap
         self.controller = controller
 
-        self.img_ore_clicked = cv.imread('ore_clicked.png')
-        self.img_mining = cv.imread('mining_bar.png')
-        self.img_pickaxe = cv.imread('pickaxe.bmp')
+        self.img_ore_clicked = File_Handler.load_image('ore_clicked')
+        self.img_mining = File_Handler.load_image('mining_bar')
+        self.img_pickaxe = File_Handler.load_icon('pickaxe')
+        self.img_minimap_symbol = File_Handler.load_image('minimap_symbol')
+        self.img_map_symbol = File_Handler.load_image('map_symbol')
+        self.img_map_clean = File_Handler.load_map(self.map, MapTypes.CLEAN)
 
     def get_rectangles(self):
         self.lock.acquire()
@@ -138,7 +145,6 @@ class Detection:
         if self.movement_screenshot is None:
             self.movement_screenshot = new_screenshot
             return False
-        print('Checking stand')
         #check multiple squares whether one stazs the same
         result = cv.matchTemplate(new_screenshot, self.movement_screenshot, cv.TM_CCOEFF_NORMED)
         _minVal, similarity, _minLoc, _maxLoc = cv.minMaxLoc(result, None)
@@ -149,6 +155,7 @@ class Detection:
         return False
     
     def get_health(self):
+        #TODO
         screenshot = self.wincap.make_screenshot()
 
         #get screenpart with hp bar
@@ -184,7 +191,7 @@ class Detection:
     def get_map(self):
         
         #open map
-        self.controller.press_key('tab', .2)
+        self.controller.press_key('tab', .1)
 
         if self.map_x == 0 or self.map_y == 0:
             #if map has not yet been located, get position
@@ -193,15 +200,14 @@ class Detection:
         screenshot = self.wincap.make_screenshot()
         
         #close map
-        self.controller.press_key('tab', .2)
+        self.controller.press_key('tab', .1)
 
         map = screenshot[self.map_y : self.map_y + self.map_height, self.map_x : self.map_x + self.map_width]
         return map
 
     def get_minimap_position(self):
-        minimap_symbol = cv.imread('minimap_symbol.png')
         screenshot = self.wincap.make_screenshot()
-        result = cv.matchTemplate(screenshot, minimap_symbol, cv.TM_CCOEFF_NORMED)
+        result = cv.matchTemplate(screenshot, self.img_minimap_symbol, cv.TM_CCOEFF_NORMED)
         _minVal, similarity, _minLoc, maxLoc = cv.minMaxLoc(result, None)
 
         if similarity > .90:
@@ -212,9 +218,6 @@ class Detection:
             print('Minimap not found')
 
     def get_map_position(self, map_is_open = False):
-        #load map symbol
-        map_symbol = cv.imread('map_symbol.png')
-
         #open map take screenshot and close map
         if  not map_is_open:
             self.controller.press_key('tab', .2)
@@ -223,7 +226,7 @@ class Detection:
             self.controller.press_key('tab', .2)
 
 
-        result = cv.matchTemplate(screenshot, map_symbol, cv.TM_CCOEFF_NORMED)
+        result = cv.matchTemplate(screenshot, self.img_map_symbol, cv.TM_CCOEFF_NORMED)
         _minVal, similarity, _minLoc, maxLoc = cv.minMaxLoc(result, None)
 
         if similarity > .95:
@@ -237,15 +240,12 @@ class Detection:
         #get minimap
         minimap = self.get_minimap()
 
-        #load map
-        map = cv.imread("maps/goldene_hoehle.png")
-
         #scale minimap down
         new_size  = (round(self.minimap_width * .31415), round(self.minimap_height * .42))
         new_minimap = cv.resize(minimap, new_size)
 
         #find closest match
-        result = cv.matchTemplate(map, new_minimap, cv.TM_CCOEFF_NORMED)
+        result = cv.matchTemplate(self.img_map_clean, new_minimap, cv.TM_CCOEFF_NORMED)
         _minVal, similarity, _minLoc, maxLoc = cv.minMaxLoc(result, None)
 
         #get position
@@ -259,7 +259,7 @@ class Detection:
             map = self.get_map()
 
             # load map with no arrow
-            empty_map = cv.imread('maps/goldene_hoehle_map.png')
+            empty_map = File_Handler.load_map(self.map, MapTypes.NORMAL)
 
             #get only the different pixels
             difference = cv.subtract(map, empty_map)
@@ -278,11 +278,6 @@ class Detection:
             if n != 0:
                 posx = posx / n
                 posy = posy / n
-
-            
-            # mask = cv.drawMarker(mask, (int(posx), int(posy)), (255,0,0))
-            # cv.imshow(' ', mask)
-            # cv.waitKey()
 
             position = (int(posx), int(posy))
 

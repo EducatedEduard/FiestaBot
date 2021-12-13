@@ -6,6 +6,8 @@ from threading import Thread, Lock
 import win32api, win32con
 import math
 import os
+import sys
+from pathlib import Path
 
 from math import atan2, cos, sin, sqrt, pi
 import numpy as np
@@ -14,16 +16,11 @@ from detection import Detection
 from window_capture import WindowCapture
 from object import Object
 from bot import Bot
+from filehandler import File_Handler
+from timeinfo import TimeInfo
+
 # cd C:\Users\Josel\OneDrive\Desktop\python\fiesta_autominer\
 # python test.py
-
-def cd(sec):
-    while sec > 0:
-        print(sec)
-        sleep(1)
-        sec -= 1
-    
-    print('go')
 
 def calc_angle(point1, point2):
     angle = math.atan2(point2[1] - point1[1], (point2[0]- point1[0]))
@@ -33,10 +30,11 @@ def calc_distance(point1, point2):
     distance = math.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2)
     return distance
 
-cd(3)
+TimeInfo.countdown(3)
+# set dir to parent dir of this dir
+os.chdir(Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
 
-# set dir to file dir
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+map = 'goldene_hoehle'
 
 PLAYER_STANDARD_SPEED = 2.55
 player_speed = 1.075
@@ -48,14 +46,14 @@ angle_error_count = 1
 
 wincap = WindowCapture('FiestaOnline')
 control =  Controller(0, 0) 
-detector = Detection('cascade/cascade.xml', wincap, control)
+detector = Detection('ore', wincap, control)
 
 # walk, in order to let minimapindicator show in same dir as cam
 control.press_key('w', .05)
 
 # get destination
-destinations = Bot.read_path('maps/exit_path.txt')
-# destinations = Bot.read_path('maps/entry_path.txt')
+# destinations = File_Handler.load_path(map, 'entry')
+destinations = File_Handler.load_path(map, 'exit')
 
 # get position
 player = detector.get_player_position()
@@ -159,11 +157,13 @@ last_destination = actual_path[0]
 for destination in actual_path:
     map = cv.line(map, last_destination, destination, (0,255,0))
     last_destination = destination
+
 cv.imshow('map', map)
-cv.imwrite('path.png', map)
+File_Handler.save_image('path', map)
 cv.waitKey()
 
-
+sys.exit()
+ 
 ##################################################
 
 # exit
