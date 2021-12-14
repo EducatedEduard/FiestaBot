@@ -25,7 +25,9 @@ def load_path(path, scale = 1):
         if lines[1] != "":
             sconnections = lines[1].split()
             for sconnection in sconnections:
-                spoints = sconnection.split('-')
+                spointsdistance = sconnection.split(':')
+                distance = int(spointsdistance[1])
+                spoints = spointsdistance[0].split('-')
                 scords = spoints[0].split(',')
                 x = int(scords[0]) * scale
                 y = int(scords[1]) * scale
@@ -34,7 +36,7 @@ def load_path(path, scale = 1):
                 x = int(scords[0]) * scale
                 y = int(scords[1]) * scale
                 p2 = (x,y)
-                connections.append((p1,p2))
+                connections.append(((p1,p2), distance))
 
     return points, connections
 
@@ -50,28 +52,31 @@ def save_path():
             y = str(round(point[1] / scale))
             f.write(x + ',' + y + ' ')
         f.write("\n")
-        for connection in connections:
+        for connection, distance in connections:
             x1 =  str(round(connection[0][0] / scale))
             y1 =  str(round(connection[0][1] / scale))
             x2 =  str(round(connection[1][0] / scale))
             y2 =  str(round(connection[1][1] / scale))
-            f.write(x1 + ',' + y1 + '-' + x2 + ',' + y2  + ' ')
+            sdistance = str(round( distance / scale ))
+            f.write(x1 + ',' + y1 + '-' + x2 + ',' + y2  + ':' + sdistance + ' ')
 
 # return closest point to x,y
-def get_closest_point(x,y):
+def get_closest_point(p1):
     global points
-    global connections
     global selected_point
 
     distance = 1000000
     closest_point = (-1,-1)
 
-    for point in points:
-        new_distance = math.sqrt((point[0]-x)**2 + (point[1]-y)**2)
+    for p2 in points:
+        new_distance = get_distance(p1, p2)
         if new_distance < distance:
             distance = new_distance
-            closest_point = point
+            closest_point = p2
     return closest_point, distance
+
+def get_distance(p1, p2):
+    return math.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
 
 # draw point 
 def draw_point(point, selected = False):
@@ -99,17 +104,26 @@ def left_click(event):
     click_point = (x,y)
 
     # get closest point
-    closest_point, distance = get_closest_point(x,y)
+    closest_point, distance = get_closest_point(click_point)
 
     # if a point is selected and close to another point connect them
-    if distance < 10 and selected_point != (-1,-1) and selected_point != closest_point:
-        connections.append((selected_point, closest_point))
+    if distance < 30 and selected_point != (-1,-1) and selected_point != closest_point:
+
+        #check if connections exists already
+        for connection, distance in connections:
+            if (connection[0] == closest_point and connection[1] == selected_point) or (connection[1] == closest_point and connection[0] == selected_point):
+                return
+        distance = get_distance(closest_point, selected_point)
+        connections.append(((selected_point, closest_point), round(distance)))
         draw_line(selected_point, closest_point)
         print('Connection added: (' + str(selected_point) + ',' + str(closest_point) + ')')
         draw_point(closest_point, True)
         draw_point(selected_point)
         selected_point = closest_point
     else:
+        # dont add if points to close
+        if distance < 10:
+            return
         # add point
         print('Point added: (' + str(x) + ',' + str(y) + ')')
         points.append(click_point)
@@ -119,14 +133,15 @@ def left_click(event):
 def right_click(event):
     # select point
     global points
-    global connections
     global selected_point
+
+    click_point = (event.x,event.y)
     
     # get closest point
-    closest_point, distance = get_closest_point(event.x,event.y)
+    closest_point, distance = get_closest_point(click_point)
 
     # select
-    if distance < 10:
+    if distance < 30:
         draw_point(selected_point)
         selected_point = closest_point
         draw_point(selected_point, True)
@@ -139,24 +154,27 @@ def middle_click(event):
     global connections
     global selected_point
 
+    click_point = (event.x,event.y)
+
     # get closest point
-    closest_point, distance = get_closest_point(event.x,event.y)
+    closest_point, distance = get_closest_point(click_point)
 
     # delete
-    if distance < 10:
+    if distance < 15:
+        # if deleted point is selected, unselect
         if selected_point == closest_point:
             selected_point = (-1,-1)
+
         # remove from points
         points.remove(closest_point)
 
         # remove from connections
-        remove = []
-        for p1, p2 in connections:
-            if p1 == closest_point or p2 == closest_point:
-                remove.append((p1,p2))
+        keep = []
+        for (p1, p2), distance in connections:
+            if p1 != closest_point and p2 != closest_point:
+                keep.append(((p1,p2), distance))
         
-        connections = [connection for connection in connections if connection not in remove]
-
+        connections = keep
         #redraw
         redraw()
 
@@ -172,10 +190,12 @@ def redraw():
 
     canvas.create_image(0,0, anchor=NW, image=img)
     canvas.pack(expand = YES, fill = BOTH)
-    for connection in connections:
+    for connection, distance in connections:
         draw_line(connection[0], connection[1])
     for point in points:
         draw_point(point)
+
+    draw_point(selected_point, True)
 
 # save path when window is closed
 def close_window():
