@@ -66,7 +66,7 @@ def get_closest_point(p1):
     global selected_point
 
     distance = 1000000
-    closest_point = (-1,-1)
+    closest_point = None
 
     for p2 in points:
         new_distance = get_distance(p1, p2)
@@ -107,7 +107,7 @@ def left_click(event):
     closest_point, distance = get_closest_point(click_point)
 
     # if a point is selected and close to another point connect them
-    if distance < 30 and selected_point != (-1,-1) and selected_point != closest_point:
+    if distance < 30 and selected_point !=None and selected_point != closest_point:
 
         #check if connections exists already
         for connection, distance in connections:
@@ -142,7 +142,8 @@ def right_click(event):
 
     # select
     if distance < 30:
-        draw_point(selected_point)
+        if selected_point != None:
+            draw_point(selected_point)
         selected_point = closest_point
         draw_point(selected_point, True)
     else:
@@ -163,7 +164,7 @@ def middle_click(event):
     if distance < 15:
         # if deleted point is selected, unselect
         if selected_point == closest_point:
-            selected_point = (-1,-1)
+            selected_point =None
 
         # remove from points
         points.remove(closest_point)
@@ -181,6 +182,37 @@ def middle_click(event):
     else:
         print('No point near')
 
+def key_press(event):
+    global points
+    global selected_point
+
+    # move point small amounts
+    if event.keysym == 'Up':
+        if selected_point !=None:
+            change_point(selected_point, (selected_point[0], selected_point[1] - 1))
+            redraw()
+    elif event.keysym == 'Down':
+        if selected_point !=None:
+            change_point(selected_point, (selected_point[0], selected_point[1] + 1))
+            redraw()
+    elif event.keysym == 'Left':
+        if selected_point !=None:
+            change_point(selected_point, (selected_point[0] - 1, selected_point[1]))
+            redraw()
+    elif event.keysym == 'Right':
+        if selected_point !=None:
+            change_point(selected_point, (selected_point[0] + 1, selected_point[1]))
+            redraw()
+
+
+    elif event.keysym == 'Escape':
+        pass
+    elif event.keysym == 'Space':
+        pass
+    elif event.keysym == 'Tab':
+        pass
+    print(event)
+
 def redraw():
     global points
     global connections
@@ -188,14 +220,47 @@ def redraw():
     global canvas
     global img
 
+    canvas.delete("all")
     canvas.create_image(0,0, anchor=NW, image=img)
     canvas.pack(expand = YES, fill = BOTH)
+
+    # draw all connections
     for connection, distance in connections:
         draw_line(connection[0], connection[1])
-    for point in points:
-        draw_point(point)
 
-    draw_point(selected_point, True)
+    # draw all points
+    for point in points:
+        if point == selected_point:
+            draw_point(point, True)
+        else:
+            draw_point(point)
+
+def change_point(old, new):
+    
+    global points
+    global connections
+    global selected_point
+
+    # change points
+    new_points = []
+    for p in points:
+        if old != p:
+            new_points.append(p)
+    new_points.append(new)
+
+    points = new_points
+
+    # change connections
+    new_connections = []
+    for c, distance in connections:
+        if old == c[0]:
+            new_connections.append(((new, c[1]), distance))
+        elif  old == c[1]:
+            new_connections.append(((new, c[0]), distance))
+        else:
+            new_connections.append((c, distance))
+    connections = new_connections
+    selected_point = new
 
 # save path when window is closed
 def close_window():
@@ -213,7 +278,7 @@ canvas_width = 500 * scale
 canvas_height = 500 * scale
 points = []
 connections = []
-selected_point = (-1,-1)
+selected_point =None
 
 # set dir to parent dir of this dir
 os.chdir(Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
@@ -225,20 +290,26 @@ canvas = Canvas(master,
            width=canvas_width, 
            height=canvas_height)
 
-img = PhotoImage(file="maps/goldene_hoehle/clean.png")
+img = PhotoImage(file="maps/goldene_hoehle/normal.png")
 img = img.zoom(scale, scale)
 
 canvas.create_image(0,0, anchor=NW, image=img)
 
 canvas.pack(expand = YES, fill = BOTH)
+canvas.focus_set()
 canvas.bind( "<Button-3>", right_click )
 canvas.bind( "<Button-2>", middle_click )
 canvas.bind( "<Button-1>", left_click )
-# message = Label( master, text = "Press and Drag the mouse to draw" )
+canvas.bind("<Key>", key_press)
+#TODO: Add keylistener, 
+# arrow keys to move points
+# tab to select next
+
+# # message = Label( master, text = "Press and Drag the mouse to draw" )
 # message.pack( side = BOTTOM )
 
 # load netfile
-points, connections = load_path('net.txt', scale)
+points, connections = load_path('maps/goldene_hoehle/paths/net.txt', scale)
 
 # draw them
 redraw()
