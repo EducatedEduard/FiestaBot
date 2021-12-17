@@ -85,7 +85,8 @@ class CameraController:
         angle = math.atan2(point2[1] - point1[1], (point2[0]- point1[0]))
         return angle
 
-    def calc_distance(self, point1, point2):
+    @staticmethod
+    def calc_distance(point1, point2):
         distance = math.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2)
         return distance
 

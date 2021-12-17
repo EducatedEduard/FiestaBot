@@ -19,17 +19,11 @@ from object import Object
 from bot import Bot
 from filehandler import File_Handler
 from timeinfo import TimeInfo
+from pathselector import PathSelector
+from pathcreator import PathCreator
 
 # cd C:\Users\Josel\OneDrive\Desktop\python\fiesta_autominer\
 # python test.py
-
-def calc_angle(point1, point2):
-    angle = math.atan2(point2[1] - point1[1], (point2[0]- point1[0]))
-    return angle
-
-def calc_distance(point1, point2):
-    distance = math.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2)
-    return distance
 
 # set dir to parent dir of this dir
 os.chdir(Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
@@ -49,20 +43,25 @@ map = 'goldene_hoehle'
 # walk, in order to let minimapindicator show in same dir as cam
 control.press_key('w', .05)
 
-# get destination
-destinations = File_Handler.load_path(map, '1')
-destinations = destinations + destinations + destinations + destinations + destinations
+# get position
+player = detector.get_player_position()
+# position = (61,443)
+# open pathselector
+ps = PathSelector()
+ps.ui_get_path_end(map, player.position)
 
-# destinations = File_Handler.load_path(map, 'entry')
-# destinations = File_Handler.load_path(map, 'exit')
+print('Routen Länge: ' + str(len(ps.selected_points)))
+print(ps.selected_points)      
 
-cc = CameraController(control, detector, destinations)
+if len(ps.selected_points) < 5:
+    sys.exit()
 
-# control.turn_camera(-1.96, 0, 0, False, 10)
+control.mouse_move(960,540)
+control.click()
+
+cc = CameraController(control, detector, ps.selected_points)
 
 cc.start()
-
-# sleep(15)
 
 # cc.stop()
 sleep(1)
