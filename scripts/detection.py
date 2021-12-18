@@ -30,23 +30,26 @@ class Detection:
 
     minimap_x = 0
     minimap_y = 0
-    minimap_width = 150
-    minimap_height = 137
+    minimap_width = 138
+    minimap_height = 132
     map_x = 0
     map_y = 0
     map_width = 512
     map_height = 512
 
     last_position = (0,0)
-
+    
     map = 'goldene_hoehle'
+    minimap_scale_x = 1
+    minimap_scale_y = 1
+
 
     cascade : cv.CascadeClassifier
 
     wincap: WindowCapture
     controller : Controller
 
-    def __init__(self, cascade_model, wincap, controller) -> None:
+    def __init__(self, cascade_model, wincap, controller, map) -> None:
         self.lock = Lock()
         self.cascade = File_Handler.load_cascade(cascade_model)
 
@@ -58,7 +61,21 @@ class Detection:
         self.img_pickaxe = File_Handler.load_icon('pickaxe')
         self.img_minimap_symbol = File_Handler.load_image('minimap_symbol')
         self.img_map_symbol = File_Handler.load_image('map_symbol')
+        self.load_map(map)
+
+    def load_map(self, map):
+        self.map = map
         self.img_map_clean = File_Handler.load_map(self.map, MapTypes.CLEAN)
+        
+        # TODO: load scales from map
+
+        # gold
+        # self.minimap_scale_x = .31415
+        # self.minimap_scale_y = .42
+        
+        # uru
+        self.minimap_scale_x = .63
+        self.minimap_scale_y = .856
 
     def get_rectangles(self):
         self.lock.acquire()
@@ -186,6 +203,11 @@ class Detection:
         screenshot = self.wincap.make_screenshot()
         minimap = screenshot[self.minimap_y : self.minimap_y + self.minimap_height, self.minimap_x : self.minimap_x + self.minimap_width]
 
+        #scale minimap down
+        
+        new_size  = (round(self.minimap_width * self.minimap_scale_x), round(self.minimap_height * self.minimap_scale_y))
+        minimap = cv.resize(minimap, new_size)
+
         return minimap
 
     def get_map(self):
@@ -210,9 +232,9 @@ class Detection:
         result = cv.matchTemplate(screenshot, self.img_minimap_symbol, cv.TM_CCOEFF_NORMED)
         _minVal, similarity, _minLoc, maxLoc = cv.minMaxLoc(result, None)
 
-        if similarity > .90:
-            self.minimap_x = maxLoc[0] + 3
-            self.minimap_y = maxLoc[1] + 17
+        if similarity > .80:
+            self.minimap_x = maxLoc[0] + 8
+            self.minimap_y = maxLoc[1] + 15
             return
         else:
             print('Minimap not found')
@@ -239,10 +261,6 @@ class Detection:
     def get_player_position(self):
         #get minimap
         minimap = self.get_minimap()
-
-        #scale minimap down
-        new_size  = (round(self.minimap_width * .31415), round(self.minimap_height * .42))
-        new_minimap = cv.resize(minimap, new_size)
 
         #find closest match
         result = cv.matchTemplate(self.img_map_clean, new_minimap, cv.TM_CCOEFF_NORMED)

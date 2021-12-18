@@ -3,6 +3,8 @@ from pathlib import Path
 import os
 import math
 
+from filehandler import File_Handler
+
 class PathCreator:
 
     points = []
@@ -12,8 +14,14 @@ class PathCreator:
     master : Tk
     canvas : Canvas
     img = None
+    map = ""
+    path = ""
 
-    def __init__(self, map):
+    def __init__(self, map, path):
+
+        self.map = map
+        self.path = path
+
         canvas_width = 500 * self.scale
         canvas_height = 500 * self.scale
 
@@ -46,11 +54,14 @@ class PathCreator:
         # message.pack( side = BOTTOM )
 
         # load netfile
-        self.points, self.connections = self.load_path('maps/goldene_hoehle/paths/net.txt')
+        self.points, self.connections = self.load_path('maps/' + map + '/paths/'+ self.path + '.txt')
 
         # draw them
         self.redraw()
-            
+        
+        # put to top
+        self.master.attributes("-topmost", True)
+
         mainloop()
     @staticmethod
     def load_path(path):
@@ -58,57 +69,38 @@ class PathCreator:
 
         points = []
         connections = []
+        try:
+            with open(path) as f:
+                lines = f.readlines()
 
-        with open(path) as f:
-            lines = f.readlines()
-
-        if len(lines) != 0:
-                if lines[0] != "":
-                    spoints = lines[0].split()
-                    for s in spoints:
-                        scords = s.split(',')
+            if len(lines) != 0:
+                    if lines[0] != "":
+                        spoints = lines[0].split()
+                        for s in spoints:
+                            scords = s.split(',')
+                            x = int(scords[0])
+                            y = int(scords[1])
+                            points.append((x,y))
+            if len(lines) > 1:
+                if lines[1] != "":
+                    sconnections = lines[1].split()
+                    for sconnection in sconnections:
+                        spointsdistance = sconnection.split(':')
+                        distance = int(spointsdistance[1])
+                        spoints = spointsdistance[0].split('-')
+                        scords = spoints[0].split(',')
                         x = int(scords[0])
                         y = int(scords[1])
-                        points.append((x,y))
-        if len(lines) > 1:
-            if lines[1] != "":
-                sconnections = lines[1].split()
-                for sconnection in sconnections:
-                    spointsdistance = sconnection.split(':')
-                    distance = int(spointsdistance[1])
-                    spoints = spointsdistance[0].split('-')
-                    scords = spoints[0].split(',')
-                    x = int(scords[0])
-                    y = int(scords[1])
-                    p1 = (x,y)
-                    scords = spoints[1].split(',')
-                    x = int(scords[0])
-                    y = int(scords[1])
-                    p2 = (x,y)
-                    connections.append(((p1,p2), distance))
+                        p1 = (x,y)
+                        scords = spoints[1].split(',')
+                        x = int(scords[0])
+                        y = int(scords[1])
+                        p2 = (x,y)
+                        connections.append(((p1,p2), distance))
+        except FileNotFoundError:
+            pass
 
         return points, connections
-
-    # save path in files
-    def save_path(self):
-
-        with open('net.txt', 'w') as f:
-            for point in self.points:
-                x = str(round(point[0]))
-                y = str(round(point[1]))
-                f.write(x + ',' + y + ' ')
-            f.write("\n")
-
-            for connection, distance in self.connections:
-                x1 =  str(round(connection[0][0]))
-                y1 =  str(round(connection[0][1]))
-                x2 =  str(round(connection[1][0]))
-                y2 =  str(round(connection[1][1]))
-                # sdistance = str(round(self.get_distance(connection[0], connection[1])))
-                sdistance = str(round( distance ))
-                f.write(x1 + ',' + y1 + '-' + x2 + ',' + y2  + ':' + sdistance + ' ')
-            
-            print('Path saved')
 
     # return closest point to x,y
     def get_closest_point(self, p1):
@@ -287,5 +279,47 @@ class PathCreator:
     # save path when window is closed
     def close_window(self):
         print('Window closed')
-        self.save_path()
+        File_Handler.save_path(self.map, self.path, self.points, self.connections)
         self.master.destroy()
+
+if __name__ == "__main__":
+    # set dir to parent dir of this dir
+    os.chdir(Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
+
+    c = 1
+
+    maps = File_Handler.get_maps()
+    for map in maps:
+        print(str(c) + ': ' + map)
+        c += 1
+
+    # ask for map
+    ask = True
+    while ask:
+        n = int(input('Choose map: ')) - 1
+        if n >= 0 and n < len(maps):
+            ask = False
+    map = maps[n]
+
+    # ask for path
+    c = 1
+    print('________________________________________')
+    paths = File_Handler.get_paths(map)
+    paths.append('New Path')
+
+    for path in paths:
+        print(str(c) + ': ' + path)
+        c += 1
+
+    ask = True
+    while ask:
+        n = int(input('Choose path: ')) - 1
+        if n >= 0 and n < len(paths):
+            ask = False
+
+    if n == len(paths) - 1:
+        name = input('Path name: ')
+    else:
+        name = paths[n]
+
+    pc = PathCreator(map, name)

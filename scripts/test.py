@@ -25,21 +25,29 @@ from pathcreator import PathCreator
 # cd C:\Users\Josel\OneDrive\Desktop\python\fiesta_autominer\
 # python test.py
 
+if __name__ != "__main__":
+    sys.exit()
+ 
 # set dir to parent dir of this dir
 os.chdir(Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
 
+map = 'goldene_hoehle'
 
 wincap = WindowCapture('FiestaOnline')
 control =  Controller(0, 0) 
-detector = Detection('ore', wincap, control)
+detector = Detection('ore', wincap, control, map)
 
-control.mouse_move(960,540)
-control.click()
+# control.mouse_move(960,540)
+# control.click()
 
-TimeInfo.countdown(3)
+# TimeInfo.countdown(3)
 
-map = 'goldene_hoehle'
-
+maap = detector.get_map()       
+cv.imwrite('map.png', maap)
+# minimap = detector.get_minimap()
+# name = str(time()) + '.png'
+# cv.imwrite(name, minimap)
+sys.exit()
 # walk, in order to let minimapindicator show in same dir as cam
 control.press_key('w', .05)
 
@@ -47,7 +55,7 @@ control.press_key('w', .05)
 player = detector.get_player_position()
 # position = (61,443)
 # open pathselector
-ps = PathSelector()
+ps = PathSelector()     
 ps.ui_get_path_end(map, player.position)
 
 print('Routen Länge: ' + str(len(ps.selected_points)))
